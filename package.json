@@ -1,0 +1,14 @@
+{
+   "name" : "web-scraper",
+   "version" : "0.0.1",
+   "description" : "Scraping Data Analysis",
+   "main" : "server.js",
+   "author" : "deadaggressor",
+   "dependencies" : {
+   	"express" : "latest",
+   	"cheerio" : "latest",
+      "request" : "latest",
+      "fs": "latest"
+   }
+
+}
