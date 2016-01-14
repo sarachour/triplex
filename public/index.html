@@ -21,6 +21,12 @@
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <link rel="stylesheet" href="css/normalize.css">
   <link rel="stylesheet" href="css/skeleton.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/jquery-1.11.3.min.js"></script>
+
+  <script src="js/dump.js"></script>
+  <script src="js/scrape.js"></script>
+  <script src="js/main.js"></script>
 
   <!-- Favicon
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
@@ -33,10 +39,19 @@
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <div class="container">
     <div class="row">
-      <div class="one-half column" style="margin-top: 25%">
-        <h4>Basic Page</h4>
-        <p>This index.html page is a placeholder with the CSS, font and favicon. It's just waiting for you to add some content! If you need some help hit up the <a href="http://www.getskeleton.com">Skeleton documentation</a>.</p>
+
+      <div style="margin-top: 25%">
+        <h4>Web Scraper Interface</h4>
+        <p>Welcome to the AO3 web scraper! please input the starting page of a search query
+        and how many pages you wish to scrape.
+        on AO3 so we can get started.</p>
+        <div><input id="url" class="wide" type="text" value="https://archiveofourown.org/works" placeholder="input url here"/></div>
+        <input class="center" id="npages" type="range" value="1" hint="input number of pages to scrape here."/>
+        <div class="center">Scrape <span id="npages-label"># pages</span> Page(s)</div>
+        <button id="scrape" class="center">Begin Scraping</button>
+
       </div>
+
     </div>
   </div>
 

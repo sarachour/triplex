@@ -1,0 +1,14 @@
+.wide {
+   width:100%;
+}
+
+.center {
+   text-align:center;
+   position:relative;
+   width:33%;
+   left:33%;
+}
+
+#scrape {
+   margin-top:2em;
+}
