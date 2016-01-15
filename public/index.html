@@ -24,6 +24,8 @@
   <link rel="stylesheet" href="css/style.css">
   <script src="js/jquery-1.11.3.min.js"></script>
 
+  <script src="js/observer.js"></script>
+  <script src="js/filesaver.js"></script>
   <script src="js/dump.js"></script>
   <script src="js/scrape.js"></script>
   <script src="js/main.js"></script>
@@ -45,8 +47,10 @@
         <p>Welcome to the AO3 web scraper! please input the starting page of a search query
         and how many pages you wish to scrape.
         on AO3 so we can get started.</p>
-        <div><input id="url" class="wide" type="text" value="https://archiveofourown.org/works" placeholder="input url here"/></div>
-        <input class="center" id="npages" type="range" value="1" hint="input number of pages to scrape here."/>
+        <div><input id="url" class="wide" type="text" 
+          value="http://archiveofourown.org/tags/Relationship(s)/works" 
+        placeholder="input url here"/></div>
+        <input class="center" id="npages" type="range" value="2" hint="input number of pages to scrape here."/>
         <div class="center">Scrape <span id="npages-label"># pages</span> Page(s)</div>
         <button id="scrape" class="center">Begin Scraping</button>
 
