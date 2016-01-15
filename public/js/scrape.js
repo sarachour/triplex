@@ -28,19 +28,22 @@ var Scraper = function(url,n){
       })
    }
    this.get_works = function(D){
+      var that = this;
       var get_work_data = function(w){
          var data = {};
+         console.log(w);
+         that.work = w;
          //get title
-         data.title = $("a",$(".heading",w)).html();
+         data.title = $("a",$(".heading",w)).eq(0).html();
          //get url
-         var url = $("a",$(".heading",w)).attr("href")
+         var url = $("a",$(".heading",w)).eq(0).attr("href")
          data.id = url 
          data.url = "http://www.archiveofourown.com"+url
          //get author
-         data.author = $("a",$("[rel=author]",w)).html()
-         data.author_url = $("a",$("[rel=author]",w)).attr("href")
+         data.author = $("a",$(".heading",w)).eq(1).html()
+         data.author_url = $("a",$(".heading",w)).eq(1).attr("href")
          //get date created 
-         data.date = $(".datetime",w).html()
+         data.date = new Date(Date.parse($(".datetime",w).html()))
          //get fandoms
          //get warnings
          //get tags
@@ -52,8 +55,8 @@ var Scraper = function(url,n){
          var stats = {};
          var elem = $(".stats",w);
          stats.language = $("dd.language",elem).html();
-         stats.words = $("dd.words",elem).html();
-         stats.hits = $("dd.hits",elem).html();
+         stats.words = parseInt($("dd.words",elem).html());
+         stats.hits = parseInt($("dd.hits",elem).html());
          stats.chapters = $("dd.chapters",elem).html();
          data.stats = stats;
 
@@ -61,7 +64,7 @@ var Scraper = function(url,n){
       }
       var works = []
       $(".work",D).each(function(i,e){
-         var d = get_work_data(d);
+         var d = get_work_data(e);
          console.log(d);
          works.push(d);
       })
