@@ -58,7 +58,20 @@ var Scraper = function(url,n){
          stats.words = parseInt($("dd.words",elem).html());
          stats.hits = parseInt($("dd.hits",elem).html());
          stats.chapters = $("dd.chapters",elem).html();
+         var tags = {}
+
+         $("li",$(".tags",w)).each(function(i,t){
+            var cls = $(t).attr("class")
+            var vl = $(".tag",t).html();
+            var url = $(".tag",t).attr("href");
+            console.log(t);
+            if(! (cls in tags)){
+               tags[cls] = []
+            }
+            tags[cls].push({name:vl,url:url});
+         })
          data.stats = stats;
+         data.tags = tags;
 
          return data;
       }
