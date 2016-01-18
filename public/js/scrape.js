@@ -94,14 +94,14 @@ var Scraper = function(url,n){
       var that = this 
 
       var scrape_body = function(body,args){
-         var summary = ""
+         var summary = []
          $(".userstuff.summary",body).each(function(i,e){
-            summary += $(e).html();
+            summary.push($(e).html());
          })
 
-         var story = "";
+         var story = [];
          $(".userstuff.module",body).each(function(i,e){
-            story += $(e).html();
+            story.push($(e).html());
          })
 
          console.log("> Received Work "+id);

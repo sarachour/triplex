@@ -146,7 +146,7 @@ $(document).ready(function(){
     if(scraper == null) return;
     var n = scraper.getNWorks();
     if(n > 1000){
-      var n = int(n/1000)+"K"
+      var n = Math.round(n/1000)+"K"
     }
 
     var meta = {
