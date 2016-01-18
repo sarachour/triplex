@@ -9,7 +9,8 @@ parser.add_argument('directory', metavar='dir',
 
 args = parser.parse_args()
 data = Loader.load_data(args.directory)
-print("loaded data.")
+print("==== Loaded Data =====")
+print(data)
 
 
 

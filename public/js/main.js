@@ -26,12 +26,12 @@ var Debugger = function(id,max){
   this.add_get = function(url){
     var div = $("<div/>");
     div.html("queue: get "+url).addClass("queue");
-    this.append(div);
+    //this.append(div);
   }
   this.add_idle = function(){
     var div = $("<div/>");
     div.html("queue: idle").addClass("queue");
-    this.append(div);
+    //this.append(div);
   }
   this.add_save = function(){
     var div = $("<div/>");
@@ -51,7 +51,7 @@ var Debugger = function(id,max){
   this.add_work = function(id){
     var div = $("<div/>");
     div.html("notify: work "+id+" processed").addClass("notify");
-    this.append(div);
+    //this.append(div);
   }
   this.clear = function(){
     $(this.id).empty();
