@@ -58,6 +58,7 @@ def load_file(file):
       addb("hits",hits)
       addb("words",words)
       addb("language",lang)
+      addb("kudos",kudos)
       addb("author",author)
       addb("bookmarks",bookmarks)
       addb("comments",comments)

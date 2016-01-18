@@ -5,9 +5,9 @@ def save(filename):
    plt.savefig("vis/"+filename, format='png')
 
 
-def histogram(filename,data,title,xaxis):
+def histogram(filename,data,bins,title,xaxis):
    plt.clf();
-   plt.hist(data);
+   plt.hist(data,bins);
    plt.title(title)
    plt.xlabel(xaxis)
    plt.ylabel("Number of Fics")  

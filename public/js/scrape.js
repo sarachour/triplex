@@ -95,7 +95,7 @@ var Scraper = function(url,n){
 
       var get_frags = function(par){
          frags = []
-         $("*",$(par)).each(function(i,e){
+         $("p",$(par)).each(function(i,e){
             frags.push($(e).text())
          })
          return frags
@@ -110,7 +110,7 @@ var Scraper = function(url,n){
          })
 
          var story = [];
-         $(".userstuff.module",body).each(function(i,e){
+         $(".userstuff",body).each(function(i,e){
             leaves = get_frags(e);
             for(idx in leaves){
                story.push(leaves[idx])
@@ -118,7 +118,6 @@ var Scraper = function(url,n){
          })
 
          console.log("> Received Work "+id);
-         console.log("STORY",story)
          that.obs.trigger("work",id);
 
          that.works[args.id].fanfic = {
@@ -171,7 +170,7 @@ var Scraper = function(url,n){
                return 0;
             }
             else{
-               return parseInt(e);
+               return parseInt(e.replace(",",""));
             }
          }
          stats.language = $("dd.language",elem).html();
