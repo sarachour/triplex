@@ -93,18 +93,32 @@ var Scraper = function(url,n){
    this.scrape_work = function(id){
       var that = this 
 
+      var get_frags = function(par){
+         frags = []
+         $("*",$(par)).each(function(i,e){
+            frags.push($(e).text())
+         })
+         return frags
+      }
       var scrape_body = function(body,args){
          var summary = []
          $(".userstuff.summary",body).each(function(i,e){
-            summary.push($(e).html());
+            leaves = get_frags(e);
+            for(idx in leaves){
+               summary.push(leaves[idx])
+            }
          })
 
          var story = [];
          $(".userstuff.module",body).each(function(i,e){
-            story.push($(e).html());
+            leaves = get_frags(e);
+            for(idx in leaves){
+               story.push(leaves[idx])
+            }
          })
 
          console.log("> Received Work "+id);
+         console.log("STORY",story)
          that.obs.trigger("work",id);
 
          that.works[args.id].fanfic = {
