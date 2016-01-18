@@ -9,14 +9,14 @@ var Observer = function(){
       if(!this.events[name]){
          this.events[name] = [];
       }
-      var i = this.events[name].length();
+      var i = this.events[name].length;
       this.events[name].push(c);
       return i;
    }
-   this.trigger = function(name){
+   this.trigger = function(name,args){
       if(this.events[name]){
-         this.events[name].each(function(i,e){
-            e();
+         this.events[name].forEach(function(e,i){
+            e(args);
          })
       }
    }

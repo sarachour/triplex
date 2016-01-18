@@ -2,13 +2,30 @@
    width:100%;
 }
 
+.cmd {
+   color:blue;
+} 
+.notify {
+   color:red;
+} 
+
+
+.queue {
+   color:darkgrey;
+}
 .center {
    text-align:center;
    position:relative;
    width:33%;
    left:33%;
 }
+#debug {
+   padding-top:0.5em;
+   padding-bottom:0.5em;
+   height:20em;
+   overflow-y:scroll;
+}
 
 #scrape {
-   margin-top:2em;
+
 }

@@ -1,26 +1,8 @@
-var delay = function(amt,cbk){
-   console.log("setting timeout with delay:",amt)
-   setTimeout(function(){
-      cbk()
-   },amt);
-}
 
-var Scraper = function(url,n){
-   this.init = function(url,n){
-      this.root = url;
-      this.dummy = $("<div/>")
-      this.npages = n;
-      this.base_url = "http://www.archiveofourown.com";
-      this.request_delay = 100;
-      this.obs = new Observer();
-   }
-   this.event = function(){
-      return this.obs;
-   }
-
+var RequestQueue = function (delay){
    this.get_page = function(url,proc,args){
       var that = this;
-      console.log("request:", url)
+      console.log("url",url)
       $.ajax({
          type: "POST",
          url: "/api/get?url="+encodeURIComponent(url),
@@ -37,6 +19,109 @@ var Scraper = function(url,n){
          }
       })
    }
+   this.deq = function(){
+      if(this.queue.length > 0){
+         var el = this.queue[0];
+         this.queue.shift();
+         this.get_page(el.url, el.cbk, el.args);
+         this.obs.trigger("get",{url:el.url,args:el.args});
+
+      }
+      else  {
+         clearInterval(this.timer);
+         this.timer = null;
+         this.obs.trigger("idle");
+      }
+   }
+
+   this.init = function(delay){
+      var that = this;
+      this.delay = delay;
+      this.obs = new Observer();
+      this.queue = [];
+   }
+   
+   this.resume = function(){
+      if(this.timer != null){
+         return;
+      }
+      var that = this;
+      this.timer = setInterval(function(){
+         that.deq();
+      },this.delay);
+   }
+
+   this.enq = function(url, proc, args){
+      var el = {url:url, cbk:proc, args:args}
+      this.obs.trigger("enq",{url:el.url,args:el.args});
+      this.queue.push(el);
+      this.resume();
+   }
+   this.init(delay);
+
+}
+
+var Scraper = function(url,n){
+   this.init = function(url,n){
+      this.root = url;
+      this.dummy = $("<div/>")
+      this.npages = n;
+      this.base_url = "http://www.archiveofourown.com";
+      this.obs = new Observer();
+      this.queue = new RequestQueue(500);
+      this.paused = false;
+      this.works = {};
+      this.curr_url = null;
+      this.curr_idx = -1;
+
+      var that = this;
+      this.queue.obs.listen("idle", function(){
+         that.obs.trigger("idle");
+         if(that.isCompleted()){
+            that.obs.trigger("complete");
+         }
+      })
+      this.queue.obs.listen("get", function(args){
+         that.obs.trigger("get",args.url)
+      })
+   }
+
+   this.event = function(){
+      return this.obs;
+   }
+   
+   this.scrape_work = function(id){
+      var that = this 
+
+      var scrape_body = function(body,args){
+         var summary = ""
+         $(".userstuff.summary",body).each(function(i,e){
+            summary += $(e).html();
+         })
+
+         var story = "";
+         $(".userstuff.module",body).each(function(i,e){
+            story += $(e).html();
+         })
+
+         console.log("> Received Work "+id);
+         that.obs.trigger("work",id);
+
+         that.works[args.id].fanfic = {
+            story: story,
+            summary:summary
+         }
+
+      }
+
+      var d = this.works[id];
+      var url = d.url;
+      var url = url + "?view_adult=true&view_full_work=true";  
+      console.log("enq:",url)
+      this.queue.enq(url, scrape_body, {id:id,url:url}); 
+
+   }
+   
    this.get_works = function(D){
       var that = this;
       var get_work_data = function(w){
@@ -91,97 +176,69 @@ var Scraper = function(url,n){
 
          return data;
       }
-      var works = {}
       $(".work",D).each(function(i,e){
-         var d = get_work_data(e);         
-         works[d.id] = d;
+         var d = get_work_data(e);   
+         that.works[d.id] = d;
+         that.scrape_work(d.id);      
       })
-      return works;
    }
-   this.scrape_works = function(){
-      var that = this 
-      var state = {
-         index: 0,
-         n: 0
-      }
-      var complete = function(){
-         console.log("==== Completed Crawl =====")
-         that.obs.trigger("completed");
-         that.save();
-      }
-      var scrape_body = function(body,args){
-         console.log(">> Retreiving Fanfic ",args.id)
-         state.index += 1;
-         var summary = ""
-         $(".userstuff.summary",body).each(function(i,e){
-            summary += $(e).html();
-         })
 
-         var story = "";
-         $(".userstuff.module",body).each(function(i,e){
-            story += $(e).html();
-         })
-
-         if(state.index == state.n){
-            complete();
-         }
-         that.works[args.id].fanfic = {
-            story: story,
-            summary:summary
-         }
-
-      }
-      for(id in this.works){
-         state.n += 1;
-      }
-
-      for(id in this.works){
-         var d = this.works[id];
-         var url = d.url;
-         var url = url + "?view_adult=true&view_full_work=true";  
-         delay(this.request_delay, 
-            (function(id,url){
-               return function(){ that.get_page(url, scrape_body, {id:id,url:url}); }
-            })(id,url)
-         )
-      }
-   }
    this.scrape_page = function(url,idx){
       var that = this;
       console.log("==== Crawling Page ", idx, "/", this.npages," ==== ");
       console.log(url);
+      this.curr_url = url;
+      this.curr_idx = idx;
+      that.obs.trigger("page",{idx:idx,url:url})
+      
       var proc_page = function(pg){
-         var works = that.get_works(pg);
-         for(id in works){
-            that.works[id] = works[id]; 
-         }
+         that.get_works(pg);
+
          var next = $("a",$(".next",pg)).attr("href");
          var next_url = that.base_url + next;
-         delay(that.request_delay, function(){
-            that.scrape_page(next_url, idx+1)
-         })
+         that.scrape_page(next_url, idx+1)
       }
-      if(idx >= this.npages){
-         this.status = "works";
-         this.scrape_works();
+      if(idx < this.npages) {
+         if(that.paused == false){
+            this.queue.enq(url, proc_page, {});
+         }
       }
-      else {
-         this.get_page(url, proc_page);
+      else{
+         this.curr_url = null;
       }
+   }
+   this.getNWorks = function(){
+      var i =0; 
+      for(id in this.works){
+         i+=1;
+      }
+      return i;
+   }
+   this.clearWorks = function(){
+      this.works = {};
    }
 
+   this.isCompleted = function(){
+      return (this.curr_idx >= this.npages);
+   }
+   this.isPaused = function(){
+      return this.paused;
+   }
+   this.pause = function(){
+      this.paused = true;
+   }
+
+   this.resume = function(){
+      this.paused = false;
+      if(this.curr_url != null){
+         this.scrape_page(this.curr_url, this.curr_idx);
+      }
+   } 
+
    this.scrape = function(){
-      this.works = {};
-      this.status = "index";
       this.scrape_page(this.root,0);
    }
-   this.save = function(){
-      var text = JSON.stringify(this.works);
-      var blob = new Blob([text], {
-          type: "text/plain;charset=utf-8;",
-      });
-      saveAs(blob, "porn.dat");
-   }
+   
 
    this.init(url,n);
 }

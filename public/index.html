@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="css/style.css">
   <script src="js/jquery-1.11.3.min.js"></script>
 
+  <script src="js/zip.js"></script>
   <script src="js/observer.js"></script>
   <script src="js/filesaver.js"></script>
   <script src="js/dump.js"></script>
@@ -50,9 +51,14 @@
         <div><input id="url" class="wide" type="text" 
           value="http://archiveofourown.org/tags/Relationship(s)/works" 
         placeholder="input url here"/></div>
-        <input class="center" id="npages" type="range" value="2" hint="input number of pages to scrape here."/>
+        <input class="center" id="npages" type="number" value="2" hint="input number of pages to scrape here."/>
         <div class="center">Scrape <span id="npages-label"># pages</span> Page(s)</div>
-        <button id="scrape" class="center">Begin Scraping</button>
+        <div id="debug" class="twelve columns">
+        </div>
+        <button id="scrape" class="two columns">Begin</button>
+        <button id="pause" class="two columns">Pause</button>
+        <button id="dump" class="two columns">Dump</button>
+        <button id="dump" class="two columns">Clear</button>
 
       </div>
 
