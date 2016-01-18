@@ -91,7 +91,7 @@ var update_paused = function(){
 }
 var toggle_paused = function(){
   if(scraper != null){
-    if(scraper.isPaused){
+    if(scraper.isPaused()){
       scraper.resume();
       debug.add_resume();
     }
@@ -139,8 +139,8 @@ $(document).ready(function(){
     scraper.scrape(add_page);
   });
   $("#pause").click(function(){
-    update_paused();
     toggle_paused();
+    update_paused();
   })
   $("#dump").click(function(){
     if(scraper == null) return;

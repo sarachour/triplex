@@ -42,6 +42,9 @@ def load_file(file):
       hits=int(stats["hits"])
       words=int(stats["words"])
       lang=stats["language"]
+      bookmarks = int(stats["bookmarks"])
+      kudos = int(stats["kudos"])
+      comments = int(stats["comments"])
 
       tags=data["tags"]
 
@@ -56,6 +59,8 @@ def load_file(file):
       addb("words",words)
       addb("language",lang)
       addb("author",author)
+      addb("bookmarks",bookmarks)
+      addb("comments",comments)
 
       addf("id",ident)
       addf("summary",stsummary)
@@ -97,6 +102,9 @@ def load_data(rootdir):
       "hits",
       "words",
       "language",
+      "bookmarks",
+      "kudos",
+      "comments",
       "author"
    ])
    glbl["tags"] = {}

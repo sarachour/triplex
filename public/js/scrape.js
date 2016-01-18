@@ -68,7 +68,7 @@ var Scraper = function(url,n){
       this.npages = n;
       this.base_url = "http://www.archiveofourown.com";
       this.obs = new Observer();
-      this.queue = new RequestQueue(100);
+      this.queue = new RequestQueue(10);
       this.paused = false;
       this.works = {};
       this.curr_url = null;
@@ -152,10 +152,24 @@ var Scraper = function(url,n){
          //get stats
          var stats = {};
          var elem = $(".stats",w);
+         var ifndef0 = function(e){
+            if(e == undefined){
+               return 0;
+            }
+            else{
+               return parseInt(e);
+            }
+         }
          stats.language = $("dd.language",elem).html();
-         stats.words = parseInt($("dd.words",elem).html());
-         stats.hits = parseInt($("dd.hits",elem).html());
+         stats.words = ifndef0($("dd.words",elem).html());
+         stats.hits = ifndef0($("dd.hits",elem).html());
+         stats.kudos =  ifndef0($("a",$("dd.kudos",elem)).html()); 
+         stats.bookmarks = ifndef0($("a",$("dd.bookmarks",elem)).html());
+         stats.comments =  ifndef0($("a",$("dd.comments",elem)).html());  
+
+
          var chaps =  $("dd.chapters",elem).html(); 
+         
          stats.chapters = {
             released: parseInt(chaps.split("/")[0]),
             total: parseInt(chaps.split("/")[1])
@@ -198,13 +212,11 @@ var Scraper = function(url,n){
          var next_url = that.base_url + next;
          that.scrape_page(next_url, idx+1)
       }
+
       if(idx < this.npages) {
          if(that.paused == false){
             this.queue.enq(url, proc_page, {});
          }
-      }
-      else{
-         this.curr_url = null;
       }
    }
    this.getNWorks = function(){
