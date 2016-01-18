@@ -13,9 +13,9 @@ def histogram(filename,data,title,xaxis):
    plt.ylabel("Number of Fics")  
    save(filename)
 
-def scatter(filename, x, y,title, xlab, ylab)
+def scatter(filename, x, y,title, xlab, ylab):
    plt.clf();
-   plt.plot(x,y);
+   plt.scatter(x,y);
    plt.title(title)
    plt.xlabel(xlab)
    plt.ylabel(ylab)  
