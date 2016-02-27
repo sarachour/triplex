@@ -10,6 +10,8 @@ from nltk.util import ngrams
 import nltk
 from textstat.textstat import textstat
 from collections import Counter
+import enchant
+from enchant.checker import SpellChecker
 
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import * 
@@ -21,26 +23,154 @@ parser.add_argument('directory', metavar='dir',
                    help='directory to process')
 
 args = parser.parse_args()
-data = Loader.load_data_partial(args.directory,20)
+data = Loader.load_data_partial(args.directory,50)
+
+dictionary = enchant.Dict("en_US")
+dictionary_br = enchant.Dict('en_GB')
+spellcheck = SpellChecker('en_US')
 
 print('The nltk version is {}.'.format(nltk.__version__))
 print('The scikit-learn version is {}.'.format(sklearn.__version__))
+
+nonalpha = re.compile('[^a-zA-Z]')
+whitespace= nltk.tokenize.RegexpTokenizer(r'\w+[*\w]+')
+punc = re.compile("[\.,?!]")
+
+fix = {
+   "im":"i'm",
+   "didn":"didn't",
+   "doesn":"doesn't",
+   "don'":"don't",
+   "couldn":"couldn't",
+   "hadn":"hadn't",
+   "hasn":"hasn't",
+   "isn":"isn't",
+   "wasn":"wasn't",
+   "weren":"weren't",
+   "ve":"I've",
+   "mustn":"mustn't",
+   "wouldn":"wouldn't",
+   "aren":"aren't",
+   "shouldn":"shouldn't",
+   "ain":"ain't"
+}
+
+slang = [
+   "clit",
+   "wanker",
+   "cuppa",
+   "twat",
+   "arse",
+   "wank",
+   "ihome",
+   "timeline",
+   "barista",
+   "arabica",
+   "unfazed",
+   "thrusted",
+   "countertop",
+   "stubbled",
+   "tsk",
+   "tsked",
+   "combust",
+   "arsehole",
+   "jeggings",
+   "blog",
+   "playlist",
+   "emoticon",
+   "youngling",
+   "younglings",
+   "dwarflings",
+   "dwarven",
+   "showerhead",
+   "hobbits",
+   "orcs",
+   "halflings",
+   "mithril",
+   "halfling",
+   "dwarfling",
+   "warg",
+   "greybeards",
+   "oliphant",
+   "dwarfling"
+]
+for slangw in slang:
+   dictionary.add(slangw)
+   spellcheck.add(slangw)
+
+def normalize(x):
+   return nonalpha.sub("",x)
+
+# templatize non-proper nouns
+def split_punc(line):
+   frags = punc.split(line)
+   return frags 
+
+def split_whitespace(x):
+   toks = whitespace.tokenize(x)
+   return toks 
+
+def repl_proper_noun(x):
+   if x.lower() in fix:
+      x = fix[x.lower()]
+
+   if dictionary.check(x) or dictionary_br.check(x):
+      return x
+   else:
+      if x[0].isupper():
+         return x
+
+      spellcheck.set_text(x)
+      for error in spellcheck:
+         for suggestion in error.suggest():
+            error.replace(suggestion)
+            break
+
+      y = spellcheck.get_text()
+
+      if x == y:
+         #print("not word",x)
+         return "?"
+      else:
+         #print("fixed",x,y)
+         return y
+
+def repl_proper_noun_ws(x):
+   y = repl_proper_noun(x)
+   ys = split_whitespace(y)
+   if len(ys) == 1:
+      return [ys[0].lower()]
+   else:
+      ys = map(lambda q: repl_proper_noun(q).lower(),ys)
+      return ys
+
+def clean_line(line):
+      line = line.replace(u'\xa0',' ')
+      #line = line.encode('ascii', 'ignore').decode('ascii')
+      return line 
+
+def clean_tokens(toks):
+   ntoks = []
+   for tok in toks:
+      res = repl_proper_noun_ws(tok)
+      ntoks += res
+   return ntoks 
 
 def fic2text(ident):
    textsegs = Loader.get_field(data['fics'],ident,'fic') 
    rtags = Loader.get_field(data['base'],ident,'tags')
    rtext = ""
-   tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+[*\w]+')
-   punc = "[\.,?!]"
    tngms = []
-   num_grams = 3
+   num_grams = 4
 
    for line in textsegs:
-      line = line.replace(u'\xa0',' ')
-      line = line.encode('ascii', 'ignore').decode('ascii').lower()
-      frags = re.compile(punc).split(line)
+      line = clean_line(line)
+      frags = split_punc(line)
       for frag in frags:
-         toks = tokenizer.tokenize(frag)
+         toks = split_whitespace(frag)
+         toks = clean_tokens(toks)
+
+         toks = map(lambda x : repl_proper_noun(x),toks) 
          ngms = list(ngrams(toks,num_grams,pad_right=False,pad_left=False))
          tngms += ngms 
 
