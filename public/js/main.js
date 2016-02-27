@@ -135,6 +135,8 @@ $(document).ready(function(){
     })
     scraper.event().listen("work", function(id){
       debug.add_work(id);
+      dumper.saveJSON(id+".json", scraper.works[id])
+      scraper.works[id] = undefined;
     })
     scraper.scrape(add_page);
   });
@@ -152,9 +154,18 @@ $(document).ready(function(){
     var meta = {
       query: data,
       curr_url: scraper.curr_url,
-      curr_idx: scraper.curr_idx
+      curr_idx: scraper.curr_idx,
+      n: n
     }
+    dumper.saveJSON("query.json", meta);
+    /*
+    for(id in scraper.works){
+      dumper.saveJSON(id+".json", scraper.works[id])
+    }
+    */
 
+    
+    /*
     dumper.saveZip("porn"+n+".zip", scraper.works, function(that,zfile,dat){
       zfile.file("query.json", JSON.stringify(meta));
       zfile.folder("works");
@@ -162,6 +173,9 @@ $(document).ready(function(){
         zfile.file("works/"+id+".json", JSON.stringify(dat[id]))
       }
     })
+    */
+    
+
   })
   $("#clear").click(function(){
     debug.clear();

@@ -1,4 +1,7 @@
 
+var escapeJSON = function(e){
+   return e.replace("\"","\\\"")
+}
 var RequestQueue = function (delay){
    this.get_page = function(url,proc,args){
       var that = this;
@@ -92,11 +95,14 @@ var Scraper = function(url,n){
    
    this.scrape_work = function(id){
       var that = this 
+      var hndl = function(e){
+         return escapeJSON(e);
+      }
 
       var get_frags = function(par){
          frags = []
          $("p",$(par)).each(function(i,e){
-            frags.push($(e).text())
+            frags.push(hndl($(e).text()))
          })
          return frags
       }
@@ -117,13 +123,18 @@ var Scraper = function(url,n){
             }
          })
 
+         if((args.id in that.works) == false)
+            return;
+
          console.log("> Received Work "+id);
-         that.obs.trigger("work",id);
 
          that.works[args.id].fanfic = {
             story: story,
             summary:summary
          }
+
+
+         that.obs.trigger("work",id);
 
       }
 
@@ -138,18 +149,21 @@ var Scraper = function(url,n){
    this.get_works = function(D){
       var that = this;
       var get_work_data = function(w){
+         var hndl = function(e){
+            return escapeJSON(e);
+         }
          var data = {};
          //console.log(w);
          that.work = w;
          //get title
-         data.title = $("a",$(".heading",w)).eq(0).html();
+         data.title = hndl($("a",$(".heading",w)).eq(0).html());
          //get url
-         var url = $("a",$(".heading",w)).eq(0).attr("href")
+         var url = hndl($("a",$(".heading",w)).eq(0).attr("href"))
          data.id = parseInt(url.split("/")[2]) 
-         data.url = that.base_url+url
+         data.url = hndl(that.base_url+url)
          //get author
-         data.author = $("a",$(".heading",w)).eq(1).html()
-         data.author_url = $("a",$(".heading",w)).eq(1).attr("href")
+         data.author = hndl($("a",$(".heading",w)).eq(1).html())
+         data.author_url = hndl($("a",$(".heading",w)).eq(1).attr("href"))
          //get date created 
          data.date = new Date(Date.parse($(".datetime",w).html()))
          data.fanfic = {
@@ -173,7 +187,7 @@ var Scraper = function(url,n){
                return parseInt(e.replace(",",""));
             }
          }
-         stats.language = $("dd.language",elem).html();
+         stats.language = hndl($("dd.language",elem).html());
          stats.words = ifndef0($("dd.words",elem).html());
          stats.hits = ifndef0($("dd.hits",elem).html());
          stats.kudos =  ifndef0($("a",$("dd.kudos",elem)).html()); 
@@ -184,15 +198,15 @@ var Scraper = function(url,n){
          var chaps =  $("dd.chapters",elem).html(); 
          
          stats.chapters = {
-            released: parseInt(chaps.split("/")[0]),
-            total: parseInt(chaps.split("/")[1])
+            released: ifndef0(chaps.split("/")[0]),
+            total: ifndef0(chaps.split("/")[1])
          }
          var tags = {}
 
          $("li",$(".tags",w)).each(function(i,t){
             var cls = $(t).attr("class")
-            var vl = $(".tag",t).html();
-            var url = $(".tag",t).attr("href");
+            var vl = hndl($(".tag",t).html());
+            var url = hndl($(".tag",t).attr("href"));
             if(! (cls in tags)){
                tags[cls] = []
             }
