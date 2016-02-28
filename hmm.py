@@ -7,7 +7,6 @@ import unidecode
 import re
 import load as Loader 
 import unicodedata
-import hmm
 from nltk.util import ngrams
 import nltk
 from textstat.textstat import textstat
@@ -19,13 +18,12 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import * 
 import sklearn
 import nltk.tag
-import marshal
 
 import hmm_model as markov
 
 
-NUM_GRAMS = 4
-NUM_FICS = 20
+NUM_GRAMS = 5
+NUM_FICS = 10
 
 parser = argparse.ArgumentParser(description='Analyze scraped data.')
 parser.add_argument('directory', metavar='dir',
@@ -44,7 +42,7 @@ print('The scikit-learn version is {}.'.format(sklearn.__version__))
 nonalpha = re.compile('[^a-zA-Z\']')
 cleanline = re.compile('[\\\\]')
 whitespace= nltk.tokenize.RegexpTokenizer(r'\w+(\'\w+)?')
-periods = re.compile("[\.\?!\"]+[\s]*")
+periods = re.compile("[\.\?!]+[\s]*")
 punc = re.compile("[,:;]")
 
 fix = {
@@ -323,10 +321,12 @@ for ident in ids:
    #qwords,qdata = fic2text(i)
    #vdata += qdata 
    #vwords.update(qwords)
+
+import ujson
 print("==== Writing to File ======")
 fh = open( "model.bin", "wb" )
 #pickle.dump(master, fh)
-marshal.dumps(master,fh)
+fh.write(ujson.dumps(master))
 #
 print("==== Finished ======")
 
