@@ -19,12 +19,13 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import * 
 import sklearn
 import nltk.tag
+import marshal
 
 import hmm_model as markov
 
 
 NUM_GRAMS = 4
-NUM_FICS = 10
+NUM_FICS = 20
 
 parser = argparse.ArgumentParser(description='Analyze scraped data.')
 parser.add_argument('directory', metavar='dir',
@@ -44,7 +45,7 @@ nonalpha = re.compile('[^a-zA-Z\']')
 cleanline = re.compile('[\\\\]')
 whitespace= nltk.tokenize.RegexpTokenizer(r'\w+(\'\w+)?')
 periods = re.compile("[\.\?!\"]+[\s]*")
-punc = re.compile("[,]")
+punc = re.compile("[,:;]")
 
 fix = {
    "im":"i'm",
@@ -160,8 +161,6 @@ def normalize(x):
 
 # templatize non-proper nouns
 def split_punc(line):
-   line = unidecode.unidecode(line)
-   line = cleanline.sub('',line)
    pers = periods.split(line)
    allfrags = []
    for p in pers:
@@ -201,6 +200,8 @@ add_proper_noun("Jim")
 add_proper_noun("Ginny")
 add_proper_noun("Sara")
 add_proper_noun("Sarah")
+add_proper_noun("Derek")
+add_proper_noun("Gilbert")
 
 def reset_state():
    state["templs"] = {}
@@ -258,7 +259,9 @@ def repl_proper_noun_ws(x):
       return ys
 
 def clean_line(line):
-      line = line.replace("Mr.","Mr").replace("Ms.","Ms").replace("Mrs.","Mrs")
+      #line = line.replace("Mr.","Mr").replace("Ms.","Ms").replace("Mrs.","Mrs")
+      line = unidecode.unidecode(line)
+      line = cleanline.sub('',line)
       return line 
 
 def clean_tokens(toks):
@@ -283,14 +286,18 @@ def fic2text(ident,master):
       line = clean_line(line)
       frags = split_punc(line)
       for frag in frags:
-         toks = split_whitespace(frag)
-         toks = clean_tokens(toks)
-         ntext = " ".join(toks)
-         master = markov.train([ntext],NUM_GRAMS,master_dict=master)
+         frag = "<start> "+frag+" <stop>"
+         master = markov.train([frag],NUM_GRAMS,master_dict=master)
+      #
+      #for frag in frags:
+      #   toks = split_whitespace(frag)
+      #   toks = clean_tokens(toks)
+      #   ntext = " ".join(toks)
+      #   master = markov.train([ntext],NUM_GRAMS,master_dict=master)
          #ttoks.update(toks)
          #ngms = list(ngrams(toks,NUM_GRAMS,pad_right=False,pad_left=False))
          #tngms += ngms
-   
+
    return master
 
    #print("===========")
@@ -308,24 +315,28 @@ vdata = []
 vwords = Set([])
 master = None
 
-for i in ids:
-   print(">> ",i)
-   master=fic2text(i,master)
+i=1;
+for ident in ids:
+   print(">> process "+str(ident)+" : # "+str(i))
+   master=fic2text(ident,master)
+   i+=1
    #qwords,qdata = fic2text(i)
    #vdata += qdata 
    #vwords.update(qwords)
+print("==== Writing to File ======")
+fh = open( "model.bin", "wb" )
+#pickle.dump(master, fh)
+marshal.dumps(master,fh)
+#
+print("==== Finished ======")
 
-print("===== Generate HMMs ===")
-for i in range(0,50):
-      print markov.generate_from(master, "cock",4, NUM_GRAMS) # 2 is the ply, 10 is the length
+#print("===========")
+#print("===== Finished Processing Ngrams ===")
+#vstat = Counter(vdata)
+#for k in vstat:
+#   print(k,vstat[k])
 
-print("===========")
-print("===== Finished Processing Ngrams ===")
-vstat = Counter(vdata)
-for k in vstat:
-   print(k,vstat[k])
+#nwords = len(vwords)
+#print("number of words:",nwords)
 
-nwords = len(vwords)
-print("number of words:",nwords)
-
-HiddenMarkovModelTagger(nwords,)
+#HiddenMarkovModelTagger(nwords,)

@@ -28,6 +28,7 @@ def ply_markov(entry, ply, current_dict, split_callback):
     """
 
     words = split_callback(entry)
+    
     for i in xrange(0, len(words)-ply):
         current_tuple = tuple([words[j] for j in xrange(i, i+ply)])
         if current_dict.get(current_tuple, False):
