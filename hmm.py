@@ -5,25 +5,31 @@ import argparse
 import random
 import unidecode
 import re
+
 import load as Loader 
+from dictionaries import *
+
 import unicodedata
+
 from nltk.util import ngrams
 import nltk
+import nltk.tag
+
 from textstat.textstat import textstat
-from collections import Counter
-import enchant
-from enchant.checker import SpellChecker
-from sets import Set
+
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import * 
 import sklearn
-import nltk.tag
+
+from collections import Counter
+from sets import Set
+
 
 import hmm_model as markov
 
 
 NUM_GRAMS = 5
-NUM_FICS = 10
+NUM_FICS = 50
 
 parser = argparse.ArgumentParser(description='Analyze scraped data.')
 parser.add_argument('directory', metavar='dir',
@@ -32,154 +38,11 @@ parser.add_argument('directory', metavar='dir',
 args = parser.parse_args()
 data = Loader.load_data_partial(args.directory,NUM_FICS)
 
-dictionary = enchant.Dict("en_US")
-dictionary_br = enchant.Dict('en_GB')
-spellcheck = SpellChecker('en_US')
+
 
 print('The nltk version is {}.'.format(nltk.__version__))
 print('The scikit-learn version is {}.'.format(sklearn.__version__))
 
-nonalpha = re.compile('[^a-zA-Z\']')
-cleanline = re.compile('[\\\\]')
-whitespace= nltk.tokenize.RegexpTokenizer(r'\w+(\'\w+)?')
-periods = re.compile("[\.\?!]+[\s]*")
-punc = re.compile("[,:;]")
-
-fix = {
-   "im":"i'm",
-   "didn":"didn't",
-   "doesn":"doesn't",
-   "don'":"don't",
-   "couldn":"couldn't",
-   "hadn":"hadn't",
-   "hasn":"hasn't",
-   "isn":"isn't",
-   "wasn":"wasn't",
-   "weren":"weren't",
-   "ve":"I've",
-   "mustn":"mustn't",
-   "wouldn":"wouldn't",
-   "aren":"aren't",
-   "shouldn":"shouldn't",
-   "ain":"ain't"
-}
-
-slang = [
-   "clit",
-   "wanker",
-   "cuppa",
-   "twat",
-   "arse",
-   "wank",
-   "ihome",
-   "timeline",
-   "barista",
-   "arabica",
-   "unfazed",
-   "thrusted",
-   "countertop",
-   "stubbled",
-   "tsk",
-   "tsked",
-   "combust",
-   "arsehole",
-   "jeggings",
-   "blog",
-   "playlist",
-   "emoticon",
-   "youngling",
-   "younglings",
-   "dwarflings",
-   "dwarven",
-   "showerhead",
-   "hobbits",
-   "orcs",
-   "halflings",
-   "mithril",
-   "halfling",
-   "dwarfling",
-   "warg",
-   "greybeards",
-   "oliphant",
-   "dwarfling",
-   "blowjob",
-   "uhh",
-   "uh",
-   "eh",
-   "oh",
-   "hii",
-   "hi",
-   "oof",
-   "haha",
-   "muuh",
-   "ooh",
-   "oooh",
-   "wassup",
-   "wazzup",
-   "uhh",
-   "uuum",
-   "uugh",
-   "ugh",
-   "uuugh",
-   "uunh",
-   "unh",
-   "uuunh",
-   "alrighty",
-   "pff",
-   "okaay",
-   "cuz",
-   "mmm",
-   "mm",
-   "argh",
-   "aargh",
-   "asshole",
-   "sh",
-   "shh",
-   "shhh",
-   "feelin",
-   "lookin",
-   "righty",
-   "ahh",
-   "aah",
-   "ish",
-   "mmhmm",
-   "mmmhmm",
-   "idk",
-   "everything'll",
-   "kickass",
-   "naw"
-]
-
-for slangw in slang:
-   dictionary.add(slangw)
-   spellcheck.add(slangw)
-
-def normalize(x):
-   return nonalpha.sub("",x)
-
-# templatize non-proper nouns
-def split_punc(line):
-   pers = periods.split(line)
-   allfrags = []
-   for p in pers:
-      if len(p) == 0:
-         continue;
-
-      firstword = p.split(' ')[0]
-      if firstword == "":
-         continue;
-
-      if((dictionary.check(firstword) or dictionary_br.check(firstword)) and (not (firstword in state["templs"]))):
-         p = p[0].lower()+p[1:]
-      
-      frags = punc.split(p)
-      allfrags += frags
-
-   return allfrags
-
-def split_whitespace(x):
-   toks = whitespace.tokenize(x)
-   return toks 
 
 state = {
    "templs":{},
@@ -187,90 +50,83 @@ state = {
    "cnt":0
 }
 
-def add_proper_noun(x):
+def add_template(x):
    handle = "@"+str(state["cnt"])
-   state["templs"][x] = handle
+   state["templs"][x.lower()] = handle
    state["cnt"]+=1
    return handle
 
-add_proper_noun("Harry")
-add_proper_noun("Jim")
-add_proper_noun("Ginny")
-add_proper_noun("Sara")
-add_proper_noun("Sarah")
-add_proper_noun("Derek")
-add_proper_noun("Gilbert")
+add_template("Harry")
+add_template("Jim")
+add_template("Ginny")
+add_template("Sara")
+add_template("Sarah")
+add_template("Derek")
+add_template("William")
+add_template("Gilbert")
+add_template("Spike")
 
 def reset_state():
    state["templs"] = {}
    state["cnt"] = 0
 
-def repl_proper_noun(x):
-   if x == "":
-      return "";
+def is_punc(x):
+   hasnone=re.search('[a-zA-Z]', x) == None
+   return hasnone
 
-   xl = x.lower();
-   if xl in fix:
-      x = fix[xl]
-   
-   if x in state["templs"]:
-      return state["templs"][x]
-
-   if dictionary.check(xl) or dictionary_br.check(xl):
-      return x
+def is_template(x):
+   if x.lower() in state["templs"]:
+      return True 
    else:
-      if len(x) > 1 and x[0].isupper() and x[1].islower():
-         if x in state["templs"]:
-            return state["templs"][x]
-         else:
-            handle = add_proper_noun(x)
-            print("RESERVED",x)
-            return handle
+      return False
 
-      spellcheck.set_text(x)
-      for error in spellcheck:
-         for suggestion in error.suggest():
-            if normalize(error.word) == normalize(suggestion):
-               error.replace(suggestion)
-               break
+def is_proper_noun(x):
+   if(len(x) < 2):
+      return False
 
-      y = spellcheck.get_text()
-      if x == y:
-         #print("new word",x)
-         dictionary.add(x)
-         return x
-      else:
-         #print("fixed",x,y)
-         return y
-
-def repl_proper_noun_ws(x):
-   y = repl_proper_noun(normalize(x))
-   ys = split_whitespace(y)
-   if len(ys) == 1:
-      if ys[0] == "":
-         return []
-      else:
-         return [ys[0].lower()]
+   if x[0].isupper() and x[1].islower():
+      return True
    else:
-      ys = map(lambda q: repl_proper_noun(normalize(q)).lower(),ys)
-      ys = filter(lambda q: q != "", ys)
-      return ys
+      return False
 
 def clean_line(line):
-      #line = line.replace("Mr.","Mr").replace("Ms.","Ms").replace("Mrs.","Mrs")
+      cleanline = re.compile('[\\\\]')
+      line = line.replace("Mr.","Mr").replace("Ms.","Ms").replace("Mrs.","Mrs").replace("Dr.","Dr").replace("Prof.","Prof")
       line = unidecode.unidecode(line)
       line = cleanline.sub('',line)
       return line 
 
-def clean_tokens(toks):
-   ntoks = []
-   for tok in toks:
-      if tok == "" or tok == None:
-         continue;
-      res = repl_proper_noun_ws(tok)
-      ntoks += res
-   return ntoks 
 
+def split_line(line):
+   toks = line.split();
+   if len(toks) < 1:
+      return []
+
+   if is_template(toks[0]):
+      toks[0] = "@"
+   else:
+      toks[0] = toks[0].lower()
+
+   #toks[0] = toks[0].lower();
+   for i in range(0,len(toks)):
+      if is_proper_noun(toks[i]):
+         if is_template(toks[i]):
+            toks[i] = "@"
+         elif not defined_in_dict(toks[i]):
+            add_template(toks[i])
+            toks[i] = "@"
+      else:
+         toks[i] = toks[i].lower()
+
+
+   toks= (["<start>"]+toks+["<end>"]);
+   return toks
+
+def split_periods(line):
+   #
+   periods = re.compile("([\\.]+|\"|\s\'|\'\s)")
+   pers = periods.split(line)
+   return pers;
 
 def fic2text(ident,master):
    textsegs = Loader.get_field(data['fics'],ident,'fic') 
@@ -282,19 +138,12 @@ def fic2text(ident,master):
 
    for line in textsegs:
       line = clean_line(line)
-      frags = split_punc(line)
-      for frag in frags:
-         frag = "<start> "+frag+" <stop>"
-         master = markov.train([frag],NUM_GRAMS,master_dict=master)
-      #
-      #for frag in frags:
-      #   toks = split_whitespace(frag)
-      #   toks = clean_tokens(toks)
-      #   ntext = " ".join(toks)
-      #   master = markov.train([ntext],NUM_GRAMS,master_dict=master)
-         #ttoks.update(toks)
-         #ngms = list(ngrams(toks,NUM_GRAMS,pad_right=False,pad_left=False))
-         #tngms += ngms
+      frags = split_periods(line)
+      for i in range(0,len(frags)):
+         if is_punc(frags[i]):
+            continue
+         #print(frags[i])
+         master = markov.train([frags[i]],NUM_GRAMS,split_callback=split_line,master_dict=master)
 
    return master
 

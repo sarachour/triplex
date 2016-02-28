@@ -3,13 +3,13 @@ import cPickle as pickle
 import random
 import itertools
 import string
+from nltk.tokenize import word_tokenize
  
 def words(entry):
     """
     Basic callback, converts an entry to ascii and splits on spaces
     """
-
-    return [word.lower().decode('ascii', 'ignore') for word in entry.split()]
+    return [entry.split()]
  
 
 def letters(entry):
@@ -28,7 +28,7 @@ def ply_markov(entry, ply, current_dict, split_callback):
     """
 
     words = split_callback(entry)
-    
+
     for i in xrange(0, len(words)-ply):
         current_tuple = tuple([words[j] for j in xrange(i, i+ply)])
         if current_dict.get(current_tuple, False):
@@ -79,13 +79,12 @@ def append_next_word(master_dict, current_output, ply):
     master_list = list(itertools.chain(*ply_list))
     current_output.append(random.choice(master_list))
 
-def generate_from(master_dict, word, output_length, ply, join_char=" "):
+def generate_from(master_dict, words, output_length, ply, join_char=" "):
     """
     Given a master dictionary, returns a generated Markov Chain of tokens 
     """
 
-    output = []
-    output.append(word)
+    output = words
     for i in xrange(output_length):
         try:
             append_next_word(master_dict, output, ply)
