@@ -20,8 +20,11 @@ from sklearn.feature_extraction.text import *
 import sklearn
 import nltk.tag
 
-NUM_GRAMS = 3
-NUM_FICS = 50
+import hmm_model as markov
+
+
+NUM_GRAMS = 4
+NUM_FICS = 10
 
 parser = argparse.ArgumentParser(description='Analyze scraped data.')
 parser.add_argument('directory', metavar='dir',
@@ -37,11 +40,11 @@ spellcheck = SpellChecker('en_US')
 print('The nltk version is {}.'.format(nltk.__version__))
 print('The scikit-learn version is {}.'.format(sklearn.__version__))
 
-nonalpha = re.compile('[^a-zA-Z]')
-cleanline = re.compile('[\"\\\\,]')
-whitespace= nltk.tokenize.RegexpTokenizer(r'\w+[*\w]+')
-periods = re.compile("[\.?!]+[\s]*")
-punc = re.compile("[,?!]")
+nonalpha = re.compile('[^a-zA-Z\']')
+cleanline = re.compile('[\\\\]')
+whitespace= nltk.tokenize.RegexpTokenizer(r'\w+(\'\w+)?')
+periods = re.compile("[\.\?!\"]+[\s]*")
+punc = re.compile("[,]")
 
 fix = {
    "im":"i'm",
@@ -99,7 +102,53 @@ slang = [
    "warg",
    "greybeards",
    "oliphant",
-   "dwarfling"
+   "dwarfling",
+   "blowjob",
+   "uhh",
+   "uh",
+   "eh",
+   "oh",
+   "hii",
+   "hi",
+   "oof",
+   "haha",
+   "muuh",
+   "ooh",
+   "oooh",
+   "wassup",
+   "wazzup",
+   "uhh",
+   "uuum",
+   "uugh",
+   "ugh",
+   "uuugh",
+   "uunh",
+   "unh",
+   "uuunh",
+   "alrighty",
+   "pff",
+   "okaay",
+   "cuz",
+   "mmm",
+   "mm",
+   "argh",
+   "aargh",
+   "asshole",
+   "sh",
+   "shh",
+   "shhh",
+   "feelin",
+   "lookin",
+   "righty",
+   "ahh",
+   "aah",
+   "ish",
+   "mmhmm",
+   "mmmhmm",
+   "idk",
+   "everything'll",
+   "kickass",
+   "naw"
 ]
 
 for slangw in slang:
@@ -128,7 +177,7 @@ def split_punc(line):
       
       frags = punc.split(p)
       allfrags += frags
-      
+
    return allfrags
 
 def split_whitespace(x):
@@ -136,34 +185,47 @@ def split_whitespace(x):
    return toks 
 
 state = {
-   "templs":{
-      "Harry":"@0",
-      "Jim":"@1"
-   },
+   "templs":{},
    "freqs":{},
-   "cnt":2
+   "cnt":0
 }
+
+def add_proper_noun(x):
+   handle = "@"+str(state["cnt"])
+   state["templs"][x] = handle
+   state["cnt"]+=1
+   return handle
+
+add_proper_noun("Harry")
+add_proper_noun("Jim")
+add_proper_noun("Ginny")
+add_proper_noun("Sara")
+add_proper_noun("Sarah")
+
 def reset_state():
    state["templs"] = {}
    state["cnt"] = 0
 
 def repl_proper_noun(x):
-   if x.lower() in fix:
-      x = fix[x.lower()]
+   if x == "":
+      return "";
 
+   xl = x.lower();
+   if xl in fix:
+      x = fix[xl]
    
+   if x in state["templs"]:
+      return state["templs"][x]
 
-   if dictionary.check(x) or dictionary_br.check(x):
+   if dictionary.check(xl) or dictionary_br.check(xl):
       return x
    else:
       if len(x) > 1 and x[0].isupper() and x[1].islower():
          if x in state["templs"]:
             return state["templs"][x]
          else:
+            handle = add_proper_noun(x)
             print("RESERVED",x)
-            handle = "@"+str(state["cnt"])
-            state["templs"][x] = handle
-            state["cnt"]+=1
             return handle
 
       spellcheck.set_text(x)
@@ -183,32 +245,39 @@ def repl_proper_noun(x):
          return y
 
 def repl_proper_noun_ws(x):
-   y = repl_proper_noun(x)
+   y = repl_proper_noun(normalize(x))
    ys = split_whitespace(y)
    if len(ys) == 1:
-      return [ys[0].lower()]
+      if ys[0] == "":
+         return []
+      else:
+         return [ys[0].lower()]
    else:
-      ys = map(lambda q: repl_proper_noun(q).lower(),ys)
+      ys = map(lambda q: repl_proper_noun(normalize(q)).lower(),ys)
+      ys = filter(lambda q: q != "", ys)
       return ys
 
 def clean_line(line):
-      line = line.replace(u'\xa0',' ')
-      #line = line.encode('ascii', 'ignore').decode('ascii')
+      line = line.replace("Mr.","Mr").replace("Ms.","Ms").replace("Mrs.","Mrs")
       return line 
 
 def clean_tokens(toks):
    ntoks = []
    for tok in toks:
+      if tok == "" or tok == None:
+         continue;
       res = repl_proper_noun_ws(tok)
       ntoks += res
    return ntoks 
 
-def fic2text(ident):
+
+def fic2text(ident,master):
    textsegs = Loader.get_field(data['fics'],ident,'fic') 
    rtags = Loader.get_field(data['base'],ident,'tags')
    rtext = ""
-   tngms = []
+   #tngms = []
    ttoks = Set([])
+   atoks = []
 
    for line in textsegs:
       line = clean_line(line)
@@ -216,30 +285,41 @@ def fic2text(ident):
       for frag in frags:
          toks = split_whitespace(frag)
          toks = clean_tokens(toks)
-         ttoks.update(toks)
+         ntext = " ".join(toks)
+         master = markov.train([ntext],NUM_GRAMS,master_dict=master)
+         #ttoks.update(toks)
+         #ngms = list(ngrams(toks,NUM_GRAMS,pad_right=False,pad_left=False))
+         #tngms += ngms
+   
+   return master
 
-         ngms = list(ngrams(toks,NUM_GRAMS,pad_right=False,pad_left=False))
-         tngms += ngms
-
+   #print("===========")
 
    #starting = model("t")
    #content = model.generate(10,starting)
    #print(" ".join(content))
 
    #tokens = nltk.word_tokenize(rtext)
-   return ttoks,tngms
+   #return ttoks,tngms
 
 print("==== Loaded. Getting Data.... =====")
 ids = Loader.get_primaries(data['fics']);
 vdata = []
 vwords = Set([])
+master = None
 
 for i in ids:
    print(">> ",i)
-   qwords,qdata = fic2text(i)
-   vdata += qdata 
-   vwords.update(qwords)
+   master=fic2text(i,master)
+   #qwords,qdata = fic2text(i)
+   #vdata += qdata 
+   #vwords.update(qwords)
 
+print("===== Generate HMMs ===")
+for i in range(0,50):
+      print markov.generate_from(master, "cock",4, NUM_GRAMS) # 2 is the ply, 10 is the length
+
+print("===========")
 print("===== Finished Processing Ngrams ===")
 vstat = Counter(vdata)
 for k in vstat:
