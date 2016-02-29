@@ -31,7 +31,7 @@ from sets import Set
 
 #NUM_GRAMS = 5
 #MIN_PHRASE = 7
-NUM_FICS = 10
+NUM_FICS = 100
 OUTFILE="out.txt"
 
 parser = argparse.ArgumentParser(description='Analyze scraped data.')
