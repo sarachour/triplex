@@ -8,6 +8,7 @@ import re
 
 import load as Loader 
 from dictionaries import *
+import onomono
 
 import unicodedata
 
@@ -25,11 +26,13 @@ from collections import Counter
 from sets import Set
 
 
-import hmm_model as markov
+#import hmm_model as markov
 
 
-NUM_GRAMS = 5
-NUM_FICS = 50
+#NUM_GRAMS = 5
+#MIN_PHRASE = 7
+NUM_FICS = 10
+OUTFILE="out.txt"
 
 parser = argparse.ArgumentParser(description='Analyze scraped data.')
 parser.add_argument('directory', metavar='dir',
@@ -44,50 +47,10 @@ print('The nltk version is {}.'.format(nltk.__version__))
 print('The scikit-learn version is {}.'.format(sklearn.__version__))
 
 
-state = {
-   "templs":{},
-   "freqs":{},
-   "cnt":0
-}
-
-def add_template(x):
-   handle = "@"+str(state["cnt"])
-   state["templs"][x.lower()] = handle
-   state["cnt"]+=1
-   return handle
-
-add_template("Harry")
-add_template("Jim")
-add_template("Ginny")
-add_template("Sara")
-add_template("Sarah")
-add_template("Derek")
-add_template("William")
-add_template("Gilbert")
-add_template("Spike")
-
-def reset_state():
-   state["templs"] = {}
-   state["cnt"] = 0
-
 def is_punc(x):
    hasnone=re.search('[a-zA-Z]', x) == None
    return hasnone
 
-def is_template(x):
-   if x.lower() in state["templs"]:
-      return True 
-   else:
-      return False
-
-def is_proper_noun(x):
-   if(len(x) < 2):
-      return False
-
-   if x[0].isupper() and x[1].islower():
-      return True
-   else:
-      return False
 
 def clean_line(line):
       cleanline = re.compile('[\\\\]')
@@ -118,13 +81,15 @@ def split_line(line):
       else:
          toks[i] = toks[i].lower()
 
+   if(len(toks) < MIN_PHRASE):
+      return [];
 
    toks= (["<start>"]+toks+["<end>"]);
    return toks
 
 def split_periods(line):
    #
-   periods = re.compile("([\\.]+|\"|\s\'|\'\s)")
+   periods = re.compile("([\\.]+|\"|\s\'|\'\s|^\')")
    pers = periods.split(line)
    return pers;
 
@@ -136,25 +101,22 @@ def fic2text(ident,master):
    ttoks = Set([])
    atoks = []
 
+   rtext = ""
    for line in textsegs:
       line = clean_line(line)
-      frags = split_periods(line)
-      for i in range(0,len(frags)):
-         if is_punc(frags[i]):
-            continue
-         #print(frags[i])
-         master = markov.train([frags[i]],NUM_GRAMS,split_callback=split_line,master_dict=master)
+      rtext += line
 
-   return master
 
-   #print("===========")
+   frags = split_periods(rtext)
+   #for i in range(0,len(frags)):
+   #   if is_punc(frags[i]):
+   #      continue
+   #   print(frags[i])
+   
+   #master = markov.train([rtext],NUM_GRAMS,split_callback=split_line,master_dict=master)
 
-   #starting = model("t")
-   #content = model.generate(10,starting)
-   #print(" ".join(content))
+   return rtext
 
-   #tokens = nltk.word_tokenize(rtext)
-   #return ttoks,tngms
 
 print("==== Loaded. Getting Data.... =====")
 ids = Loader.get_primaries(data['fics']);
@@ -163,19 +125,23 @@ vwords = Set([])
 master = None
 
 i=1;
+ofh = open("out.txt","w")
 for ident in ids:
    print(">> process "+str(ident)+" : # "+str(i))
-   master=fic2text(ident,master)
+   text=fic2text(ident,master)
+   ofh.write(text)
    i+=1
    #qwords,qdata = fic2text(i)
    #vdata += qdata 
    #vwords.update(qwords)
 
+ofh.close()
 import ujson
 print("==== Writing to File ======")
 fh = open( "model.bin", "wb" )
 #pickle.dump(master, fh)
 fh.write(ujson.dumps(master))
+fh.close()
 #
 print("==== Finished ======")
 

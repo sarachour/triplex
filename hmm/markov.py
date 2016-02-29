@@ -75,7 +75,9 @@ def append_next_word(master_dict, current_output, ply):
     ply_list = []
     for i in xrange(1, ply+1):
         check = master_dict[i].get(get_check_tuple(current_output, i),{})
+        #ply_list.extend([[key]*value*i for key, value in check.iteritems()])
         ply_list.extend([[key]*value*i for key, value in check.iteritems()])
+
     master_list = list(itertools.chain(*ply_list))
     current_output.append(random.choice(master_list))
 
