@@ -10,6 +10,8 @@ import load as Loader
 from dictionaries import *
 import onomono
 
+from propernoun import *
+from onomono import *
 import unicodedata
 
 from nltk.util import ngrams
@@ -25,13 +27,14 @@ import sklearn
 from collections import Counter
 from sets import Set
 
+import ujson
 
 #import hmm_model as markov
 
 
 #NUM_GRAMS = 5
 #MIN_PHRASE = 7
-NUM_FICS = 100
+NUM_FICS = 10
 OUTFILE="out.txt"
 
 parser = argparse.ArgumentParser(description='Analyze scraped data.')
@@ -47,51 +50,104 @@ print('The nltk version is {}.'.format(nltk.__version__))
 print('The scikit-learn version is {}.'.format(sklearn.__version__))
 
 
-def is_punc(x):
-   hasnone=re.search('[a-zA-Z]', x) == None
-   return hasnone
-
-
 def clean_line(line):
       cleanline = re.compile('[\\\\]')
-      line = line.replace("Mr.","Mr").replace("Ms.","Ms").replace("Mrs.","Mrs").replace("Dr.","Dr").replace("Prof.","Prof")
       line = unidecode.unidecode(line)
       line = cleanline.sub('',line)
       return line 
 
 
-def split_line(line):
-   toks = line.split();
-   if len(toks) < 1:
-      return []
-
-   if is_template(toks[0]):
-      toks[0] = "@"
-   else:
-      toks[0] = toks[0].lower()
-
-   #toks[0] = toks[0].lower();
-   for i in range(0,len(toks)):
-      if is_proper_noun(toks[i]):
-         if is_template(toks[i]):
-            toks[i] = "@"
-         elif not defined_in_dict(toks[i]):
-            add_template(toks[i])
-            toks[i] = "@"
-      else:
-         toks[i] = toks[i].lower()
-
-   if(len(toks) < MIN_PHRASE):
-      return [];
-
-   toks= (["<start>"]+toks+["<end>"]);
-   return toks
-
-def split_periods(line):
+def proc_line(line):
    #
-   periods = re.compile("([\\.]+|\"|\s\'|\'\s|^\')")
-   pers = periods.split(line)
-   return pers;
+   whitespace = re.compile("[\s]+")
+   punc_pfx = re.compile("^[^A-Za-z]+")
+   punc_sfx = re.compile("[^A-Za-z]+$")
+   alpha = re.compile("[A-Za-z]+((-|')[A-Za-z])?[A-Za-z]*")
+   hyphen = re.compile("[-]+")
+   poss = re.compile("'s")
+   tokens = whitespace.split(line)
+   nline = ""
+   for tok in tokens:
+      if len(tok) == 0:
+         continue;
+
+      pfx = punc_pfx.search(tok)
+      sfx = punc_sfx.search(tok)
+      word = alpha.match(tok)
+      suff = ""
+      pref = ""
+
+      if word == None:
+         nline += tok + " "
+         continue;
+
+      word = word.group(0)
+
+      if pfx != None:
+         pref = pfx.group(0)
+
+      if sfx != None: 
+         suff = sfx.group(0)
+
+      if "'s" in word:
+         suff = "'s" + suff
+         word = poss.split(word)[0]
+
+      success,sfx = recog_sfx(word)
+
+      if success:
+         nline += pref+sfx+suff 
+         continue;
+
+      if "-" in word:
+         if is_proper_noun(word) and is_template(word):
+               nname = get_template(word);
+               nline += pref+nname+suff+" "
+               continue;
+
+         subwords = hyphen.split(word)
+         all_words = True 
+         for subword in subwords:
+            if defined_in_dict(subword) == False:
+               all_words = False
+
+         if all_words == True:
+            nline += pref + word.lower() + suff + " ";
+         else:
+            if is_proper_noun(word) and not is_template(word):
+               nname = add_template(word)
+               nline += pref+nname+suff+" "
+
+            elif is_proper_noun(word) and is_template(word):
+               nname = get_template(word);
+               nline += pref+nname+suff+" "
+
+            else:
+               nline += pref+ word + suff+" "
+
+
+      else:
+         if is_proper_noun(word) and is_template(word):
+               nname = get_template(word);
+               nline += pref+nname+suff+" "
+               continue;
+
+         if defined_in_dict(word):
+            nline += tok + " "
+         else:
+            if is_proper_noun(word) and not is_template(word):
+               nname = add_template(word)
+               nline += pref+nname+suff+" "
+
+            elif is_proper_noun(word) and is_template(word):
+               nname = get_template(word);
+               nline += pref+nname+suff+" "
+
+            else:
+               print("unknown",pref,word,suff)
+               nline += pref+ word + suff+" "
+
+   return nline;
 
 def fic2text(ident,master):
    textsegs = Loader.get_field(data['fics'],ident,'fic') 
@@ -104,10 +160,10 @@ def fic2text(ident,master):
    rtext = ""
    for line in textsegs:
       line = clean_line(line)
+      line = proc_line(line)
       rtext += line
 
 
-   frags = split_periods(rtext)
    #for i in range(0,len(frags)):
    #   if is_punc(frags[i]):
    #      continue
@@ -136,12 +192,8 @@ for ident in ids:
    #vwords.update(qwords)
 
 ofh.close()
-import ujson
 print("==== Writing to File ======")
-fh = open( "model.bin", "wb" )
-#pickle.dump(master, fh)
-fh.write(ujson.dumps(master))
-fh.close()
+dump_template("names.templ")
 #
 print("==== Finished ======")
 

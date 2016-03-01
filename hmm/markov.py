@@ -15,6 +15,7 @@ def state_to_text((a,b,c)):
   t = a+" "+b+" "+c
   return t 
 
+
 args = parser.parse_args()
 
 cmd = args.command 
